@@ -1,3 +1,5 @@
+#from __future__ import annotations  # Allows using the class name as a string in type hints
+
 import os
 import re
 
@@ -33,7 +35,9 @@ from prompts import (
     legal_prompt_agreement_type,
     
     legal_short_prompt,
-    legal_warning
+    legal_warning,
+
+    legal_prompt_content
     )
 
 # Set up logging
@@ -139,6 +143,107 @@ class Party(BaseModel):
 class Classification(BaseModel):
     document_type: str = Field(..., enum=["ДОГОВОР АРЕНДЫ", "ДОГОВОР ПОСТАВКИ", "ДОГОВОР ПОДРЯДА", "ДОГОВОР ОКАЗАНИЯ УСЛУГ", "АГЕНТСКИЙ ДОГОВОР", "ДРУГОЕ"])
     parties: Optional[List[Party]] = Field(..., description="Стороны Договора")
+    @model_validator(mode='after')
+    def set_default_roles_and_names(cls, model):
+        if model.parties:
+            for index, party in enumerate(model.parties):
+                # Set party_role to "Party_<index>" if it's None or empty
+                if not party.party_role:
+                    party.party_role = f"Party_{index}"
+                # Set party_legal_name to party_role if it's None or empty
+                if not party.party_legal_name:
+                    party.party_legal_name = party.party_role
+        return model
+
+"""
+class LegalDocumentPart(BaseModel):
+    part_number: str = Field(..., description="Номер раздела")
+    part_summary: str = Field(..., description="Короткое саммари содержания раздела длиной до 64 символов.")
+
+
+class LegalDocumentParagraph(BaseModel):
+    paragraph_number: str = Field(..., description="Номер параграфа")
+    paragraph_summary: str = Field(..., description="Короткое саммари содержания параграфа длиной до 64 символов.")
+    parts: Optional[List[LegalDocumentParagraph]] = Field(default_factory=list, description="Список подпараграфов.", 
+                                                               examples=[
+                                                                   {'paragraph_number': '2', 'paragraph_summary': 'ПРАВА И ОБЯЗАННОСТИ ИСПОЛНИТЕЛЯ', 'parts':[ 
+                                                                       {'paragraph_number': '2.1', 'paragraph_summary': 'Права исполнителя', 'parts': [
+                                                                           {'paragraph_number': '2.1.1', 'paragraph_summary': 'Требование исполнение обязательств', 'parts': []},
+                                                                           {'paragraph_number': '2.1.2', 'paragraph_summary': 'Привлечение третьих лиц', 'parts': []},
+                                                                        ]},
+                                                                       {'paragraph_number': '2.1', 'paragraph_summary': 'Обязанности Исполнителя', 'parts': [
+                                                                           {'paragraph_number': '2.1.1', 'paragraph_summary': 'Проверка документов', 'parts': []},
+                                                                           {'paragraph_number': '2.1.2', 'paragraph_summary': 'Консультации', 'parts': []},
+                                                                        ]},
+                                                                    ]},
+                                                                   {'paragraph_number': '3', 'paragraph_summary': 'ПРАВА И ОБЯЗАННОСТИ ЗАКАЗЧИКА', 'parts':[ 
+                                                                       {'paragraph_number': '3.1', 'paragraph_summary': 'Права Заказчика', 'parts': []},
+                                                                       {'paragraph_number': '3.2', 'paragraph_summary': 'Обязанности Заказчика', 'parts': [
+                                                                           {'paragraph_number': '3.2.1', 'paragraph_summary': 'Согласование действие', 'parts': []},
+                                                                           {'paragraph_number': '3.2.2', 'paragraph_summary': 'Содействие', 'parts': []},
+                                                                        ]},
+                                                                    ]},
+                                                                ])
+    #class Config:
+    #    from_attributes: bool = True
+    #    # If you're not using `from __future__ import annotations`, you can use:
+    #    # arbitrary_types_allowed = True
+
+class LegalDocumentInto(BaseModel):
+    document_type: str = Field(..., enum=["ДОГОВОР АРЕНДЫ", "ДОГОВОР ПОСТАВКИ", "ДОГОВОР ПОДРЯДА", "ДОГОВОР ОКАЗАНИЯ УСЛУГ", "АГЕНТСКИЙ ДОГОВОР", "ДРУГОЕ"])
+    parties: Optional[List[Party]] = Field(..., description="Стороны Договора")
+    paragraphs: Optional[List[LegalDocumentParagraph]] = Field(..., description="Список всех параграфов и подпараграфов Договора.", 
+                                                               examples=[
+                                                                   {'paragraph_number': '1', 'paragraph_summary': 'Предмет Договора', 'parts':[ 
+                                                                       {'paragraph_number': '1.1', 'paragraph_summary': 'Описание предмета Договора', 'parts': []},
+                                                                    ]},
+                                                                   {'paragraph_number': '2', 'paragraph_summary': 'ПРАВА И ОБЯЗАННОСТИ ИСПОЛНИТЕЛЯ', 'parts':[ 
+                                                                       {'paragraph_number': '2.1', 'paragraph_summary': 'Права исполнителя', 'parts': [
+                                                                           {'paragraph_number': '2.1.1', 'paragraph_summary': 'Требование исполнение обязательств', 'parts': []},
+                                                                           {'paragraph_number': '2.1.2', 'paragraph_summary': 'Привлечение третьих лиц', 'parts': []},
+                                                                        ]},
+                                                                       {'paragraph_number': '2.1', 'paragraph_summary': 'Обязанности Исполнителя', 'parts': [
+                                                                           {'paragraph_number': '2.1.1', 'paragraph_summary': 'Проверка документов', 'parts': []},
+                                                                           {'paragraph_number': '2.1.2', 'paragraph_summary': 'Консультации', 'parts': []},
+                                                                        ]},
+                                                                    ]},
+                                                                   {'paragraph_number': '3', 'paragraph_summary': 'ПРАВА И ОБЯЗАННОСТИ ЗАКАЗЧИКА', 'parts':[ 
+                                                                       {'paragraph_number': '3.1', 'paragraph_summary': 'Права Заказчика', 'parts': []},
+                                                                       {'paragraph_number': '3.2', 'paragraph_summary': 'Обязанности Заказчика', 'parts': [
+                                                                           {'paragraph_number': '3.2.1', 'paragraph_summary': 'Согласование действие', 'parts': []},
+                                                                           {'paragraph_number': '3.2.2', 'paragraph_summary': 'Содействие', 'parts': []},
+                                                                        ]},
+                                                                    ]},
+                                                                ])
+"""
+
+class LegalDocumentParagraph(BaseModel):
+    paragraph_number: str = Field(..., description="Номер параграфа")
+    paragraph_summary: str = Field(..., description="Короткое саммари содержания параграфа длиной до 64 символов.")
+
+
+class LegalDocumentInto(BaseModel):
+    document_type: str = Field(..., enum=["ДОГОВОР АРЕНДЫ", "ДОГОВОР ПОСТАВКИ", "ДОГОВОР ПОДРЯДА", "ДОГОВОР ОКАЗАНИЯ УСЛУГ", "АГЕНТСКИЙ ДОГОВОР", "ДРУГОЕ"])
+    parties: Optional[List[Party]] = Field(..., description="Стороны Договора")
+    paragraphs: Optional[List[LegalDocumentParagraph]] = Field(..., description="Список всех параграфов и подпараграфов Договора. Сохраняй нумерацию из текста Договора, даже если она некорректна - со всеми пропусками и повторениями!", 
+                                                               examples=[
+                                                                    {'paragraph_number': '1', 'paragraph_summary': 'Предмет Договора'},
+                                                                    {'paragraph_number': '1.1', 'paragraph_summary': 'Описание предмета Договора'},
+                                                                    {'paragraph_number': '2', 'paragraph_summary': 'ПРАВА И ОБЯЗАННОСТИ ИСПОЛНИТЕЛЯ'},
+                                                                    {'paragraph_number': '2.1', 'paragraph_summary': 'Права исполнителя'},
+                                                                    {'paragraph_number': '2.1.1', 'paragraph_summary': 'Требование исполнение обязательств'},
+                                                                    {'paragraph_number': '2.1.2', 'paragraph_summary': 'Привлечение третьих лиц'},
+                                                                    {'paragraph_number': '2.1', 'paragraph_summary': 'Обязанности Исполнителя'},
+                                                                    {'paragraph_number': '2.1.1', 'paragraph_summary': 'Проверка документов'},
+                                                                    {'paragraph_number': '2.1.2', 'paragraph_summary': 'Консультации'},
+                                                                    {'paragraph_number': '3', 'paragraph_summary': 'ПРАВА И ОБЯЗАННОСТИ ЗАКАЗЧИКА'},
+                                                                    {'paragraph_number': '3.1', 'paragraph_summary': 'Права Заказчика'},
+                                                                    {'paragraph_number': '3.2', 'paragraph_summary': 'Обязанности Заказчика'},
+                                                                    {'paragraph_number': '3.2.1', 'paragraph_summary': 'Согласование действие'},
+                                                                    {'paragraph_number': '3.2.2', 'paragraph_summary': 'Содействие'}
+                                                                ])
+
+
 
     @model_validator(mode='after')
     def set_default_roles_and_names(cls, model):
@@ -152,9 +257,36 @@ class Classification(BaseModel):
                     party.party_legal_name = party.party_role
         return model
 
+
 tagging_prompt = ChatPromptTemplate.from_template(legal_prompt_agreement_type)
 tagging_chain = llm.with_structured_output(Classification)
 classify_chain = tagging_prompt | tagging_chain
+
+content_prompt = ChatPromptTemplate.from_template(legal_prompt_content)
+content_chain = llm.with_structured_output(LegalDocumentInto)
+content_chain = content_prompt | content_chain
+
+
+for file_path in [f for f in os.listdir('./tests/') if os.path.isfile(os.path.join('./tests/', f))]:
+    try:
+        loader = get_loader(f'./tests/{file_path}')
+        documents = loader.load()
+        full_text = "\n".join([doc.page_content for doc in documents])
+        full_text = ''.join(char for char in full_text if char.isprintable())
+        #legal_prompt_content
+        contract_content = content_chain.invoke({"contract": full_text})
+
+        with open(f'./results/{file_path}.txt', 'w', encoding='utf-8') as f:
+            f.write(f"{contract_content.document_type}\n")
+            for party in contract_content.parties:
+                f.write(f"{party.party_role}: {party.party_legal_name}\n")
+            for paragraph in contract_content.paragraphs:
+                f.write(f"{paragraph.paragraph_number}: {paragraph.paragraph_summary}\n")
+        print(f'{file_path} processed')
+    except Exception as e:
+        print(f"Error processing {file_path}: {str(e)}")
+
+
 
 for file_path in os.listdir('./tests/'):
     try:

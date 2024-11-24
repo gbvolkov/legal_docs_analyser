@@ -7,6 +7,14 @@ Contract:
 {contract}
 """
 
+legal_prompt_content = """
+Extract the desired information from the following passage.
+
+Only extract the properties mentioned in the 'LegalDocumentInto' function.
+
+Contract:
+{contract}
+"""
 
 legal_short_prompt = """
 ### ПЕРСОНАЖ
